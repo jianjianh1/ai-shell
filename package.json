@@ -4,15 +4,8 @@
   "version": "1.0.12",
   "type": "module",
   "dependencies": {
-    "@clack/core": "latest",
-    "@clack/prompts": "latest",
-    "@nexssp/os": "^2.0.35",
-    "cleye": "^1.3.2",
     "clipboardy": "^2.3.0",
-    "dedent": "^0.7.0",
-    "execa": "^7.1.1",
-    "ini": "^4.0.0",
-    "kolorist": "^1.7.0"
+    "execa": "^7.1.1"
   },
   "bin": {
     "ai-shell": "./dist/cli.mjs",
@@ -21,12 +14,14 @@
   "scripts": {
     "start": "jiti ./src/cli.ts",
     "typecheck": "tsc",
-    "build": "pkgroll"
+    "build": "pkgroll",
+    "compile": "pkgroll && bun build dist/cli.mjs --compile --outfile ai-bin"
   },
   "devDependencies": {
-    "@types/dedent": "^0.7.0",
-    "@types/ini": "^1.3.31",
+    "@clack/core": "latest",
+    "@clack/prompts": "latest",
     "@types/node": "^18.15.11",
+    "cleye": "^1.3.2",
     "jiti": "^1.17.0",
     "pkgroll": "^1.9.0",
     "typescript": "^4.9.5"

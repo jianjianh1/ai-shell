@@ -1,11 +1,27 @@
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
-import ini from 'ini';
+const ini = {
+  parse(str: string): Record<string, string> {
+    const result: Record<string, string> = {};
+    for (const line of str.split('\n')) {
+      const eq = line.indexOf('=');
+      if (eq > 0) result[line.slice(0, eq).trim()] = line.slice(eq + 1).trim();
+    }
+    return result;
+  },
+  stringify(obj: Record<string, any>): string {
+    return (
+      Object.entries(obj)
+        .map(([k, v]) => `${k}=${v}`)
+        .join('\n') + '\n'
+    );
+  },
+};
 import { commandName } from './constants';
 import { KnownError, handleCliError } from './error';
 import * as p from '@clack/prompts';
-import { red } from 'kolorist';
+import { red } from './colors';
 import i18n from './i18n';
 
 const { hasOwnProperty } = Object.prototype;

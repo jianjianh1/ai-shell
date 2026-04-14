@@ -1,6 +1,6 @@
 import { command } from 'cleye';
 import { spinner, intro, outro, text, isCancel } from '@clack/prompts';
-import { cyan, green } from 'kolorist';
+import { cyan, green } from '../helpers/colors';
 import { createProvider } from '../helpers/providers';
 import { getConfig } from '../helpers/config';
 import i18n from '../helpers/i18n';

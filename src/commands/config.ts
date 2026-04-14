@@ -1,5 +1,5 @@
 import { command } from 'cleye';
-import { red } from 'kolorist';
+import { red } from '../helpers/colors';
 import {
   hasOwn,
   getConfig,

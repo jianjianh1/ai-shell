@@ -1,11 +1,9 @@
 import * as p from '@clack/prompts';
-import { execaCommand } from 'execa';
-import { cyan, dim } from 'kolorist';
+import { cyan, dim } from './helpers/colors';
 import { createProvider, Provider } from './helpers/providers';
 import { getConfig } from './helpers/config';
 import { projectName } from './helpers/constants';
 import { KnownError } from './helpers/error';
-import clipboardy from 'clipboardy';
 import i18n from './helpers/i18n';
 import { appendToShellHistory } from './helpers/shell-history';
 
@@ -31,6 +29,7 @@ async function runScript(script: string) {
   p.outro(`${i18n.t('Running')}: ${script}`);
   console.log('');
   try {
+    const { execaCommand } = await import('execa');
     await execaCommand(script, {
       stdio: 'inherit',
       shell: process.env.SHELL || true,
@@ -185,7 +184,8 @@ async function runOrReviseFlow(
         label: '📋 ' + i18n.t('Copy'),
         hint: i18n.t('Copy the generated script to your clipboard'),
         value: async () => {
-          await clipboardy.write(script);
+          const clipboardy = await import('clipboardy');
+          await clipboardy.default.write(script);
           p.outro(i18n.t('Copied to clipboard!'));
         },
       },

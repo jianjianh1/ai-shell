@@ -1,4 +1,4 @@
-import { dim } from 'kolorist';
+import { dim } from './colors';
 import { version } from '../../package.json';
 import i18n from './i18n';
 

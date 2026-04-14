@@ -1,6 +1,6 @@
 # AI Shell
 
-A CLI that converts natural language to shell commands, powered by local CLI agents (claude, codex, gemini).
+A CLI that converts natural language to shell commands, powered by the Gemini API with CLI agent fallbacks (claude, codex, gemini).
 
 ## Setup
 
@@ -8,15 +8,18 @@ A CLI that converts natural language to shell commands, powered by local CLI age
 git clone <this-repo>
 cd ai-shell
 npm install
-npm run build
+npm run compile
+cp ai-bin /usr/local/bin/ai
 ```
+
+Requires [Bun](https://bun.sh) for the `compile` step (`curl -fsSL https://bun.sh/install | bash`).
 
 ## Configuration
 
-Default provider is `gemini`. Change it with:
+Set your Gemini API key (get one at [Google AI Studio](https://aistudio.google.com/apikey)):
 
 ```sh
-ai config set PROVIDER=codex
+ai config set GEMINI_API_KEY=<your key>
 ```
 
 Or use the interactive config UI:
@@ -29,9 +32,10 @@ ai config
 
 | Key | Values | Default |
 |-----|--------|---------|
-| `PROVIDER` | `claude`, `codex`, `gemini` | `gemini` |
-| `MODEL` | any model the CLI supports | (provider default) |
-| `SILENT_MODE` | `true`, `false` | `false` |
+| `PROVIDER` | `gemini-api`, `claude`, `codex`, `gemini` | `gemini-api` |
+| `GEMINI_API_KEY` | your API key | (required for gemini-api) |
+| `MODEL` | any model the provider supports | `gemini-2.5-flash` |
+| `SILENT_MODE` | `true`, `false` | `true` |
 
 Set any key with `ai config set KEY=value`, read with `ai config get KEY`.
 
@@ -41,17 +45,12 @@ Set any key with `ai config set KEY=value`, read with `ai config get KEY`.
 ai list all log files
 ```
 
-Output:
+Output (silent mode, default):
 
 ```
 ◇  Your script:
 │
 │  find . -name "*.log"
-│
-◇  Explanation:
-│
-│  1. Searches for all files with the extension ".log" in the current
-│     directory and any subdirectories.
 │
 ◆  Run this script?
 │  ● ✅ Yes (Lets go!)
@@ -62,13 +61,7 @@ Output:
 └
 ```
 
-### Silent mode
-
-Skip the explanation:
-
-```sh
-ai -s list all log files
-```
+To include an explanation, use `ai config set SILENT_MODE=false`.
 
 ### Chat mode
 
@@ -82,6 +75,7 @@ Interactive conversation — type `exit` or Ctrl+C to quit.
 
 ```sh
 npm start          # run from source (jiti)
-npm run build      # production build
-npm run typecheck   # type check only
+npm run build      # bundle to dist/cli.mjs
+npm run compile    # bundle + compile to ai-bin binary
+npm run typecheck  # type check only
 ```

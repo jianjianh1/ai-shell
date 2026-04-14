@@ -1,5 +1,5 @@
 import { cli } from 'cleye';
-import { red } from 'kolorist';
+import { red } from './helpers/colors';
 import { version } from '../package.json';
 import config from './commands/config';
 import chat from './commands/chat';

@@ -1,32 +1,45 @@
-import dedent from 'dedent';
+import dedent from './dedent';
 import { detectShell } from './os-detect';
 
-function getShellDetails() {
-  return dedent`
-      The target shell is ${detectShell()}
-  `;
+function getOsName(): string {
+  const platform = process.platform;
+  const names: Record<string, string> = {
+    darwin: 'macOS',
+    linux: 'Linux',
+    win32: 'Windows',
+    freebsd: 'FreeBSD',
+  };
+  return names[platform] || platform;
 }
 
-function getOperationSystemDetails() {
-  const os = require('@nexssp/os/legacy');
-  return os.name();
+let _shellDetails: string;
+let _generationDetails: string;
+
+function shellDetails() {
+  if (!_shellDetails) {
+    _shellDetails = `The target shell is ${detectShell()}`;
+  }
+  return _shellDetails;
 }
 
-const shellDetails = getShellDetails();
+function generationDetails() {
+  if (!_generationDetails) {
+    _generationDetails = dedent`
+      Only reply with the single line command surrounded by three backticks. It must be able to be directly run in the target shell. Do not include any other text.
 
-const generationDetails = dedent`
-    Only reply with the single line command surrounded by three backticks. It must be able to be directly run in the target shell. Do not include any other text.
-
-    Make sure the command runs on ${getOperationSystemDetails()} operating system.
-  `;
+      Make sure the command runs on ${getOsName()} operating system.
+    `;
+  }
+  return _generationDetails;
+}
 
 export function getFullPrompt(prompt: string) {
   return dedent`
     Create a single line command that one can enter in a terminal and run, based on what is specified in the prompt.
 
-    ${shellDetails}
+    ${shellDetails()}
 
-    ${generationDetails}
+    ${generationDetails()}
 
     The prompt is: ${prompt}
   `;
@@ -48,6 +61,6 @@ export function getRevisionPrompt(prompt: string, code: string) {
 
     The prompt: ${prompt}
 
-    ${generationDetails}
+    ${generationDetails()}
   `;
 }
