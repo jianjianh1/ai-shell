@@ -2,7 +2,6 @@ import { cli } from 'cleye';
 import { red } from 'kolorist';
 import { version } from '../package.json';
 import config from './commands/config';
-import update from './commands/update';
 import chat from './commands/chat';
 import { commandName } from './helpers/constants';
 import { handleCliError } from './helpers/error';
@@ -24,20 +23,16 @@ cli(
         alias: 's',
       },
     },
-    commands: [config, chat, update],
+    commands: [config, chat],
   },
   (argv) => {
     const silentMode = argv.flags.silent;
     const promptText = argv._.join(' ');
 
-    if (promptText.trim() === 'update') {
-      update.callback?.(argv);
-    } else {
-      prompt({ usePrompt: promptText, silentMode }).catch((error) => {
-        console.error(`\n${red('✖')} ${error.message}`);
-        handleCliError(error);
-        process.exit(1);
-      });
-    }
+    prompt({ usePrompt: promptText, silentMode }).catch((error) => {
+      console.error(`\n${red('✖')} ${error.message}`);
+      handleCliError(error);
+      process.exit(1);
+    });
   }
 );
