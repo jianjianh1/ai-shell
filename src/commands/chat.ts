@@ -1,10 +1,8 @@
 import { command } from 'cleye';
 import { spinner, intro, outro, text, isCancel } from '@clack/prompts';
 import { cyan, green } from 'kolorist';
-import { generateCompletion, readData } from '../helpers/completion';
+import { createProvider } from '../helpers/providers';
 import { getConfig } from '../helpers/config';
-import { streamToIterable } from '../helpers/stream-to-iterable';
-import { ChatCompletionRequestMessage } from 'openai';
 import i18n from '../helpers/i18n';
 
 export default command(
@@ -16,12 +14,9 @@ export default command(
     },
   },
   async () => {
-    const {
-      OPENAI_KEY: key,
-      OPENAI_API_ENDPOINT: apiEndpoint,
-      MODEL: model,
-    } = await getConfig();
-    const chatHistory: ChatCompletionRequestMessage[] = [];
+    const config = await getConfig();
+    const provider = createProvider(config);
+    const chatHistory: Array<{ role: string; content: string }> = [];
 
     console.log('');
     intro(i18n.t('Starting new conversation'));
@@ -46,12 +41,7 @@ export default command(
         role: 'user',
         content: userPrompt,
       });
-      const { readResponse } = await getResponse({
-        prompt: chatHistory,
-        key,
-        model,
-        apiEndpoint,
-      });
+      const { readResponse } = await provider.generateChat(chatHistory);
 
       infoSpin.stop(`${green('AI Shell:')}`);
       console.log('');
@@ -70,29 +60,3 @@ export default command(
     prompt();
   }
 );
-
-async function getResponse({
-  prompt,
-  number = 1,
-  key,
-  model,
-  apiEndpoint,
-}: {
-  prompt: string | ChatCompletionRequestMessage[];
-  number?: number;
-  model?: string;
-  key: string;
-  apiEndpoint: string;
-}) {
-  const stream = await generateCompletion({
-    prompt,
-    key,
-    model,
-    number,
-    apiEndpoint,
-  });
-
-  const iterableStream = streamToIterable(stream);
-
-  return { readResponse: readData(iterableStream) };
-}

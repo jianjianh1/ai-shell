@@ -1,11 +1,7 @@
 import * as p from '@clack/prompts';
 import { execaCommand } from 'execa';
 import { cyan, dim } from 'kolorist';
-import {
-  getExplanation,
-  getRevision,
-  getScriptAndInfo,
-} from './helpers/completion';
+import { createProvider, Provider } from './helpers/providers';
 import { getConfig } from './helpers/config';
 import { projectName } from './helpers/constants';
 import { KnownError } from './helpers/error';
@@ -101,13 +97,9 @@ export async function prompt({
   usePrompt,
   silentMode,
 }: { usePrompt?: string; silentMode?: boolean } = {}) {
-  const {
-    OPENAI_KEY: key,
-    SILENT_MODE,
-    OPENAI_API_ENDPOINT: apiEndpoint,
-    MODEL: model,
-  } = await getConfig();
-  const skipCommandExplanation = silentMode || SILENT_MODE;
+  const config = await getConfig();
+  const provider = createProvider(config);
+  const skipCommandExplanation = silentMode || config.SILENT_MODE;
 
   console.log('');
   p.intro(`${cyan(`${projectName}`)}`);
@@ -115,12 +107,7 @@ export async function prompt({
   const thePrompt = usePrompt || (await getPrompt());
   const spin = p.spinner();
   spin.start(i18n.t(`Loading...`));
-  const { readInfo, readScript } = await getScriptAndInfo({
-    prompt: thePrompt,
-    key,
-    model,
-    apiEndpoint,
-  });
+  const { readInfo, readScript } = await provider.getScriptAndInfo(thePrompt);
   spin.stop(`${i18n.t('Your script')}:`);
   console.log('');
   const script = await readScript(process.stdout.write.bind(process.stdout));
@@ -131,12 +118,7 @@ export async function prompt({
     spin.start(i18n.t(`Getting explanation...`));
     const info = await readInfo(process.stdout.write.bind(process.stdout));
     if (!info) {
-      const { readExplanation } = await getExplanation({
-        script,
-        key,
-        model,
-        apiEndpoint,
-      });
+      const { readExplanation } = await provider.getExplanation(script);
       spin.stop(`${i18n.t('Explanation')}:`);
       console.log('');
       await readExplanation(process.stdout.write.bind(process.stdout));
@@ -146,14 +128,12 @@ export async function prompt({
     }
   }
 
-  await runOrReviseFlow(script, key, model, apiEndpoint, silentMode);
+  await runOrReviseFlow(script, provider, silentMode);
 }
 
 async function runOrReviseFlow(
   script: string,
-  key: string,
-  model: string,
-  apiEndpoint: string,
+  provider: Provider,
   silentMode?: boolean
 ) {
   const emptyScript = script.trim() === '';
@@ -191,7 +171,7 @@ async function runOrReviseFlow(
         label: '🔁 ' + i18n.t('Revise'),
         hint: i18n.t('Give feedback via prompt and get a new result'),
         value: async () => {
-          await revisionFlow(script, key, model, apiEndpoint, silentMode);
+          await revisionFlow(script, provider, silentMode);
         },
       },
       {
@@ -220,21 +200,13 @@ async function runOrReviseFlow(
 
 async function revisionFlow(
   currentScript: string,
-  key: string,
-  model: string,
-  apiEndpoint: string,
+  provider: Provider,
   silentMode?: boolean
 ) {
   const revision = await promptForRevision();
   const spin = p.spinner();
   spin.start(i18n.t(`Loading...`));
-  const { readScript } = await getRevision({
-    prompt: revision,
-    code: currentScript,
-    key,
-    model,
-    apiEndpoint,
-  });
+  const { readScript } = await provider.getRevision(revision, currentScript);
   spin.stop(`${i18n.t(`Your new script`)}:`);
 
   console.log('');
@@ -246,12 +218,7 @@ async function revisionFlow(
   if (!silentMode) {
     const infoSpin = p.spinner();
     infoSpin.start(i18n.t(`Getting explanation...`));
-    const { readExplanation } = await getExplanation({
-      script,
-      key,
-      model,
-      apiEndpoint,
-    });
+    const { readExplanation } = await provider.getExplanation(script);
 
     infoSpin.stop(`${i18n.t('Explanation')}:`);
     console.log('');
@@ -261,7 +228,7 @@ async function revisionFlow(
     console.log(dim('•'));
   }
 
-  await runOrReviseFlow(script, key, model, apiEndpoint, silentMode);
+  await runOrReviseFlow(script, provider, silentMode);
 }
 
 export const parseAssert = (name: string, condition: any, message: string) => {
