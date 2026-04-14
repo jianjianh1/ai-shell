@@ -27,7 +27,7 @@ const parseAssert = (name: string, condition: any, message: string) => {
 
 const configParsers = {
   PROVIDER(provider?: string) {
-    return provider || 'claude';
+    return provider || 'gemini';
   },
   MODEL(model?: string) {
     return model || '';
