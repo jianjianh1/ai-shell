@@ -1,6 +1,5 @@
 import dedent from 'dedent';
 import { detectShell } from './os-detect';
-import i18n from './i18n';
 
 function getShellDetails() {
   return dedent`
@@ -14,10 +13,6 @@ function getOperationSystemDetails() {
 }
 
 const shellDetails = getShellDetails();
-
-const explainScript = dedent`
-  Please provide a clear, concise description of the script, using minimal words. Outline the steps in a list format.
-`;
 
 const generationDetails = dedent`
     Only reply with the single line command surrounded by three backticks. It must be able to be directly run in the target shell. Do not include any other text.
@@ -39,7 +34,7 @@ export function getFullPrompt(prompt: string) {
 
 export function getExplanationPrompt(script: string) {
   return dedent`
-    ${explainScript} Please reply in ${i18n.getCurrentLanguagenName()}
+    Please provide a clear, concise description of the script, using minimal words. Outline the steps in a list format.
 
     The script: ${script}
   `;

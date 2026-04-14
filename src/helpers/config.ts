@@ -12,11 +12,6 @@ const { hasOwnProperty } = Object.prototype;
 export const hasOwn = (object: unknown, key: PropertyKey) =>
   hasOwnProperty.call(object, key);
 
-const languagesOptions = Object.entries(i18n.languages).map(([key, value]) => ({
-  value: key,
-  label: value,
-}));
-
 const parseAssert = (name: string, condition: any, message: string) => {
   if (!condition) {
     throw new KnownError(
@@ -27,16 +22,17 @@ const parseAssert = (name: string, condition: any, message: string) => {
 
 const configParsers = {
   PROVIDER(provider?: string) {
-    return provider || 'gemini';
+    return provider || 'gemini-api';
+  },
+  GEMINI_API_KEY(key?: string) {
+    return key || '';
   },
   MODEL(model?: string) {
     return model || '';
   },
   SILENT_MODE(mode?: string) {
+    if (mode === undefined) return true;
     return String(mode).toLowerCase() === 'true';
-  },
-  LANGUAGE(language?: string) {
-    return language || 'en';
   },
 } as const;
 
@@ -110,6 +106,13 @@ export const showConfigUI = async () => {
           hint: config.PROVIDER,
         },
         {
+          label: i18n.t('Gemini API Key'),
+          value: 'GEMINI_API_KEY',
+          hint: config.GEMINI_API_KEY
+            ? '...' + config.GEMINI_API_KEY.slice(-4)
+            : i18n.t('(not set)'),
+        },
+        {
           label: i18n.t('Model'),
           value: 'MODEL',
           hint: config.MODEL || i18n.t('(default)'),
@@ -119,13 +122,6 @@ export const showConfigUI = async () => {
           value: 'SILENT_MODE',
           hint: hasOwn(config, 'SILENT_MODE')
             ? config.SILENT_MODE.toString()
-            : i18n.t('(not set)'),
-        },
-        {
-          label: i18n.t('Language'),
-          value: 'LANGUAGE',
-          hint: hasOwn(config, 'LANGUAGE')
-            ? config.LANGUAGE
             : i18n.t('(not set)'),
         },
         {
@@ -142,6 +138,7 @@ export const showConfigUI = async () => {
       const provider = (await p.select({
         message: i18n.t('Pick a provider'),
         options: [
+          { value: 'gemini-api', label: 'Gemini (API)' },
           { value: 'claude', label: 'Claude (CLI)' },
           { value: 'codex', label: 'Codex (CLI)' },
           { value: 'gemini', label: 'Gemini (CLI)' },
@@ -149,6 +146,15 @@ export const showConfigUI = async () => {
       })) as string;
       if (p.isCancel(provider)) return;
       await setConfigs([['PROVIDER', provider]]);
+    } else if (choice === 'GEMINI_API_KEY') {
+      const key = await p.text({
+        message: i18n.t('Enter your Gemini API key'),
+        validate: (value) => {
+          if (!value.length) return i18n.t('Please enter a key');
+        },
+      });
+      if (p.isCancel(key)) return;
+      await setConfigs([['GEMINI_API_KEY', key]]);
     } else if (choice === 'MODEL') {
       const model = await p.text({
         message: i18n.t('Enter the model name (leave empty for default)'),
@@ -162,14 +168,6 @@ export const showConfigUI = async () => {
       });
       if (p.isCancel(silentMode)) return;
       await setConfigs([['SILENT_MODE', silentMode ? 'true' : 'false']]);
-    } else if (choice === 'LANGUAGE') {
-      const language = (await p.select({
-        message: i18n.t('Enter the language you want to use'),
-        options: languagesOptions,
-      })) as string;
-      if (p.isCancel(language)) return;
-      await setConfigs([['LANGUAGE', language]]);
-      i18n.setLanguage(language);
     }
     if (choice === 'cancel') return;
     showConfigUI();

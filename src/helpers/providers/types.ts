@@ -12,6 +12,7 @@ export interface Provider {
 
   getRevision(prompt: string, code: string): Promise<{
     readScript: DataReader;
+    readInfo: DataReader;
   }>;
 
   generateChat(

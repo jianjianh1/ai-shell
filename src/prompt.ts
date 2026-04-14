@@ -9,23 +9,18 @@ import clipboardy from 'clipboardy';
 import i18n from './helpers/i18n';
 import { appendToShellHistory } from './helpers/shell-history';
 
-const init = async () => {
-  try {
-    const { LANGUAGE: language } = await getConfig();
-    i18n.setLanguage(language);
-  } catch {
-    i18n.setLanguage('en');
-  }
-};
+let cachedConfig: Awaited<ReturnType<typeof getConfig>> | null = null;
 
-const examples: string[] = [];
-const initPromise = init();
-initPromise.then(() => {
-  examples.push(i18n.t('delete all log files'));
-  examples.push(i18n.t('list js files'));
-  examples.push(i18n.t('fetch me a random joke'));
-  examples.push(i18n.t('list all commits'));
-});
+const initPromise = getConfig().then((config) => {
+  cachedConfig = config;
+}).catch(() => {});
+
+const examples = [
+  'delete all log files',
+  'list js files',
+  'fetch me a random joke',
+  'list all commits',
+];
 
 const sample = <T>(arr: T[]): T | undefined => {
   const len = arr == null ? 0 : arr.length;
@@ -97,9 +92,15 @@ export async function prompt({
   usePrompt,
   silentMode,
 }: { usePrompt?: string; silentMode?: boolean } = {}) {
-  const config = await getConfig();
+  await initPromise;
+  const config = cachedConfig || (await getConfig());
   const provider = createProvider(config);
   const skipCommandExplanation = silentMode || config.SILENT_MODE;
+
+  // Fire CLI call immediately if prompt is already known
+  const earlyResult = usePrompt
+    ? provider.getScriptAndInfo(usePrompt)
+    : null;
 
   console.log('');
   p.intro(`${cyan(`${projectName}`)}`);
@@ -107,7 +108,9 @@ export async function prompt({
   const thePrompt = usePrompt || (await getPrompt());
   const spin = p.spinner();
   spin.start(i18n.t(`Loading...`));
-  const { readInfo, readScript } = await provider.getScriptAndInfo(thePrompt);
+  const { readInfo, readScript } = earlyResult
+    ? await earlyResult
+    : await provider.getScriptAndInfo(thePrompt);
   spin.stop(`${i18n.t('Your script')}:`);
   console.log('');
   const script = await readScript(process.stdout.write.bind(process.stdout));
@@ -116,16 +119,20 @@ export async function prompt({
   console.log(dim('•'));
   if (!skipCommandExplanation) {
     spin.start(i18n.t(`Getting explanation...`));
-    const info = await readInfo(process.stdout.write.bind(process.stdout));
-    if (!info) {
+    const info = await readInfo(() => {});
+    if (info) {
+      spin.stop(`${i18n.t('Explanation')}:`);
+      console.log('');
+      process.stdout.write(info);
+    } else {
       const { readExplanation } = await provider.getExplanation(script);
       spin.stop(`${i18n.t('Explanation')}:`);
       console.log('');
       await readExplanation(process.stdout.write.bind(process.stdout));
-      console.log('');
-      console.log('');
-      console.log(dim('•'));
     }
+    console.log('');
+    console.log('');
+    console.log(dim('•'));
   }
 
   await runOrReviseFlow(script, provider, silentMode);
@@ -206,7 +213,7 @@ async function revisionFlow(
   const revision = await promptForRevision();
   const spin = p.spinner();
   spin.start(i18n.t(`Loading...`));
-  const { readScript } = await provider.getRevision(revision, currentScript);
+  const { readScript, readInfo } = await provider.getRevision(revision, currentScript);
   spin.stop(`${i18n.t(`Your new script`)}:`);
 
   console.log('');
@@ -218,11 +225,17 @@ async function revisionFlow(
   if (!silentMode) {
     const infoSpin = p.spinner();
     infoSpin.start(i18n.t(`Getting explanation...`));
-    const { readExplanation } = await provider.getExplanation(script);
-
-    infoSpin.stop(`${i18n.t('Explanation')}:`);
-    console.log('');
-    await readExplanation(process.stdout.write.bind(process.stdout));
+    const info = await readInfo(() => {});
+    if (info) {
+      infoSpin.stop(`${i18n.t('Explanation')}:`);
+      console.log('');
+      process.stdout.write(info);
+    } else {
+      const { readExplanation } = await provider.getExplanation(script);
+      infoSpin.stop(`${i18n.t('Explanation')}:`);
+      console.log('');
+      await readExplanation(process.stdout.write.bind(process.stdout));
+    }
     console.log('');
     console.log('');
     console.log(dim('•'));

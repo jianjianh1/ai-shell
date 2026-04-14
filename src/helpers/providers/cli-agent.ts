@@ -24,7 +24,7 @@ const CLI_CONFIGS: Record<string, CliConfig> = {
   codex: {
     command: 'codex',
     buildArgs: (prompt, model?) => {
-      const args = ['-q', prompt];
+      const args = ['exec', prompt];
       if (model) args.push('-m', model);
       return args;
     },
@@ -32,16 +32,20 @@ const CLI_CONFIGS: Record<string, CliConfig> = {
   gemini: {
     command: 'gemini',
     buildArgs: (prompt, model?) => {
-      const args = [prompt];
-      if (model) args.push('--model', model);
+      const args = ['-p', prompt, '-o', 'text', '--model', model || 'gemini-2.5-flash'];
       return args;
     },
   },
 };
 
-function extractCommand(text: string): string {
+function extractCommandAndInfo(text: string): { command: string; info: string } {
   const match = text.match(/```(?:\w*)\n([\s\S]*?)```/);
-  return match ? match[1].trim() : text.trim();
+  if (match) {
+    const command = match[1].trim();
+    const info = text.slice(match.index! + match[0].length).trim();
+    return { command, info };
+  }
+  return { command: text.trim(), info: '' };
 }
 
 function makeReader(text: string): DataReader {
@@ -63,7 +67,7 @@ export class CliAgentProvider implements Provider {
     const config = CLI_CONFIGS[provider];
     if (!config) {
       throw new KnownError(
-        `Unknown CLI provider: ${provider}. Supported: openai, ${Object.keys(CLI_CONFIGS).join(', ')}`
+        `Unknown CLI provider: ${provider}. Supported: ${Object.keys(CLI_CONFIGS).join(', ')}`
       );
     }
     this.cliConfig = { ...config };
@@ -91,10 +95,10 @@ export class CliAgentProvider implements Provider {
   async getScriptAndInfo(prompt: string) {
     const fullPrompt = getFullPrompt(prompt);
     const output = await this.runCli(fullPrompt);
-    const command = extractCommand(output);
+    const { command, info } = extractCommandAndInfo(output);
     return {
       readScript: makeReader(command),
-      readInfo: emptyReader(),
+      readInfo: info ? makeReader(info) : emptyReader(),
     };
   }
 
@@ -107,8 +111,11 @@ export class CliAgentProvider implements Provider {
   async getRevision(prompt: string, code: string) {
     const fullPrompt = getRevisionPrompt(prompt, code);
     const output = await this.runCli(fullPrompt);
-    const command = extractCommand(output);
-    return { readScript: makeReader(command) };
+    const { command, info } = extractCommandAndInfo(output);
+    return {
+      readScript: makeReader(command),
+      readInfo: info ? makeReader(info) : emptyReader(),
+    };
   }
 
   async generateChat(messages: Array<{ role: string; content: string }>) {
