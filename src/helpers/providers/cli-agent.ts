@@ -1,9 +1,9 @@
 import { execa } from 'execa';
 import { Provider, DataReader } from './types';
 import {
-  getFullPrompt,
+  getCombinedPrompt,
   getExplanationPrompt,
-  getRevisionPrompt,
+  getCombinedRevisionPrompt,
 } from '../prompts';
 import { KnownError } from '../error';
 
@@ -93,7 +93,7 @@ export class CliAgentProvider implements Provider {
   }
 
   async getScriptAndInfo(prompt: string) {
-    const fullPrompt = getFullPrompt(prompt);
+    const fullPrompt = getCombinedPrompt(prompt);
     const output = await this.runCli(fullPrompt);
     const { command, info } = extractCommandAndInfo(output);
     return {
@@ -109,7 +109,7 @@ export class CliAgentProvider implements Provider {
   }
 
   async getRevision(prompt: string, code: string) {
-    const fullPrompt = getRevisionPrompt(prompt, code);
+    const fullPrompt = getCombinedRevisionPrompt(prompt, code);
     const output = await this.runCli(fullPrompt);
     const { command, info } = extractCommandAndInfo(output);
     return {

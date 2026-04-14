@@ -1,5 +1,6 @@
 import { Provider, DataReader } from './types';
 import {
+  getSystemPrompt,
   getFullPrompt,
   getExplanationPrompt,
   getRevisionPrompt,
@@ -38,21 +39,27 @@ export class GeminiApiProvider implements Provider {
     this.model = model || 'gemini-2.5-flash';
   }
 
-  private async generate(prompt: string): Promise<string> {
+  private async generate(
+    userPrompt: string,
+    systemPrompt?: string
+  ): Promise<string> {
     const url = `${API_BASE}/${this.model}:generateContent?key=${this.apiKey}`;
+    const body: any = {
+      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+      generationConfig: { temperature: 0 },
+    };
+    if (systemPrompt) {
+      body.systemInstruction = { parts: [{ text: systemPrompt }] };
+    }
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
-      const body = await res.text();
-      throw new KnownError(
-        `Gemini API error ${res.status}: ${body}`
-      );
+      const errBody = await res.text();
+      throw new KnownError(`Gemini API error ${res.status}: ${errBody}`);
     }
 
     const data = await res.json();
@@ -60,7 +67,10 @@ export class GeminiApiProvider implements Provider {
   }
 
   async getScriptAndInfo(prompt: string) {
-    const output = await this.generate(getFullPrompt(prompt));
+    const output = await this.generate(
+      getFullPrompt(prompt),
+      getSystemPrompt()
+    );
     const command = extractCommand(output);
     return {
       readScript: makeReader(command),
@@ -74,7 +84,10 @@ export class GeminiApiProvider implements Provider {
   }
 
   async getRevision(prompt: string, code: string) {
-    const output = await this.generate(getRevisionPrompt(prompt, code));
+    const output = await this.generate(
+      getRevisionPrompt(prompt, code),
+      getSystemPrompt()
+    );
     const command = extractCommand(output);
     return {
       readScript: makeReader(command),
@@ -91,12 +104,15 @@ export class GeminiApiProvider implements Provider {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents }),
+      body: JSON.stringify({
+        contents,
+        generationConfig: { temperature: 0.7 },
+      }),
     });
 
     if (!res.ok) {
-      const body = await res.text();
-      throw new KnownError(`Gemini API error ${res.status}: ${body}`);
+      const errBody = await res.text();
+      throw new KnownError(`Gemini API error ${res.status}: ${errBody}`);
     }
 
     const data = await res.json();

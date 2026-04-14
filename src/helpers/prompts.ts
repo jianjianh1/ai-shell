@@ -1,66 +1,51 @@
-import dedent from './dedent';
 import { detectShell } from './os-detect';
 
 function getOsName(): string {
-  const platform = process.platform;
   const names: Record<string, string> = {
     darwin: 'macOS',
     linux: 'Linux',
     win32: 'Windows',
     freebsd: 'FreeBSD',
   };
-  return names[platform] || platform;
+  return names[process.platform] || process.platform;
 }
 
-let _shellDetails: string;
-let _generationDetails: string;
+let _systemPrompt: string;
 
-function shellDetails() {
-  if (!_shellDetails) {
-    _shellDetails = `The target shell is ${detectShell()}`;
+export function getSystemPrompt(): string {
+  if (!_systemPrompt) {
+    const shell = detectShell();
+    const os = getOsName();
+    _systemPrompt = [
+      `You are a shell command generator for ${shell} on ${os}.`,
+      'Output ONLY the command inside a single ```bash code block.',
+      'No explanation, no alternatives, no extra text.',
+      'Prefer simple, common commands over obscure ones.',
+      'The command must be directly runnable in the target shell.',
+    ].join('\n');
   }
-  return _shellDetails;
+  return _systemPrompt;
 }
 
-function generationDetails() {
-  if (!_generationDetails) {
-    _generationDetails = dedent`
-      Only reply with the single line command surrounded by three backticks. It must be able to be directly run in the target shell. Do not include any other text.
-
-      Make sure the command runs on ${getOsName()} operating system.
-    `;
-  }
-  return _generationDetails;
+export function getFullPrompt(prompt: string): string {
+  return prompt;
 }
 
-export function getFullPrompt(prompt: string) {
-  return dedent`
-    Create a single line command that one can enter in a terminal and run, based on what is specified in the prompt.
-
-    ${shellDetails()}
-
-    ${generationDetails()}
-
-    The prompt is: ${prompt}
-  `;
+export function getCombinedPrompt(prompt: string): string {
+  return `${getSystemPrompt()}\n\n${prompt}`;
 }
 
-export function getExplanationPrompt(script: string) {
-  return dedent`
-    Please provide a clear, concise description of the script, using minimal words. Outline the steps in a list format.
-
-    The script: ${script}
-  `;
+export function getExplanationPrompt(script: string): string {
+  return `Briefly explain this command in a few short bullet points:\n${script}`;
 }
 
-export function getRevisionPrompt(prompt: string, code: string) {
-  return dedent`
-    Update the following script based on what is asked in the following prompt.
+export function getRevisionPrompt(prompt: string, code: string): string {
+  return `Revise this command: ${code}\n\n${prompt}`;
+}
 
-    The script: ${code}
-
-    The prompt: ${prompt}
-
-    ${generationDetails()}
-  `;
+export function getCombinedRevisionPrompt(
+  prompt: string,
+  code: string
+): string {
+  return `${getSystemPrompt()}\n\nRevise this command: ${code}\n\n${prompt}`;
 }
